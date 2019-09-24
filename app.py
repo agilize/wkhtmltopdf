@@ -10,7 +10,7 @@ import tempfile
 import zipfile
 from werkzeug.wsgi import wrap_file
 from werkzeug.wrappers import Request, Response
-from executor import execute
+from executor import execute, ExternalCommandFailed
 
 
 @Request.application
@@ -62,9 +62,21 @@ def application(request):
 
                 # Execute the command using executor
                 print("Executing > " + cmd)
-                execute(cmd)
-                # g = file(path_to_bigfile) # or any generator
-                # return Response(g, direct_passthrough=True)
+                try:
+                    execute(cmd)
+                except ExternalCommandFailed as e:
+                    # | EditCode | Explanation                                                   |
+                    # | 0        | All OK                                                        |
+                    # | 1        | PDF generated OK, but some request(s) did not return HTTP 200 |
+                    # | 2        | Could not something something                                 |
+                    # | X        | Could not write PDF: File in use                              |
+                    # | Y        | Could not write PDF: No write permission                      |
+                    # | Z        | PDF generated OK, but some JavaScript requests(s) timeouted   |
+                    # | A        | Invalid arguments provided                                    |
+                    # | B        | Could not find input file(s)                                  |
+                    # | C        | Process timeout                                               |
+                    if e.returncode not in [0, 1]:
+                        raise e
 
                 pdf_file = open(file_name + '.pdf')
 
