@@ -25,9 +25,7 @@ def application(request):
         return Response('alive')
 
     with tempfile.NamedTemporaryFile(suffix='.zip') as source_file:
-        # First check if any files were uploaded
         source_file.write(request.files['file'].read())
-        # Load any options that may have been provided in options
         options = json.loads(request.form.get('options', '{}'))
 
         source_file.flush()
@@ -36,13 +34,10 @@ def application(request):
             with zipfile.ZipFile(source_file.name, 'r') as zip_ref:
                 zip_ref.extractall(tmpdirname)
 
-                # Evaluate argument to run with subprocess
                 args = ['wkhtmltopdf']
 
-                # Add Global Options
                 if options:
                     for option, value in options.items():
-                        # uppercase consider single hyphen
                         if option.isupper():
                             args.append('-%s' % option)
                         else:
@@ -54,14 +49,11 @@ def application(request):
                             else:
                                 args.append('"%s"' % value)
 
-                # Add source file name and output file name
-                file_name = tmpdirname + '/index.html' #source_file.name
+                file_name = tmpdirname + '/index.html'
                 args += [file_name, file_name + ".pdf"]
 
                 cmd = ' '.join(args)
 
-                # Execute the command using executor
-                print("Executing > " + cmd)
                 try:
                     execute(cmd)
                 except ExternalCommandFailed as e:
